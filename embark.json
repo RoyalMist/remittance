@@ -1,0 +1,29 @@
+{
+  "contracts": [
+    "contracts/**"
+  ],
+  "app": {
+    "js/Remittance.js": "app/Remittance.js",
+    "Remittance.html": "app/Remittance.html"
+  },
+  "buildDir": "build/",
+  "config": {
+    "contracts": "contracts.js",
+    "blockchain": false,
+    "storage": false,
+    "communication": false,
+    "webserver": false
+  },
+  "versions": {
+    "solc": "0.5.8"
+  },
+  "plugins": {
+    "embarkjs-connector-web3": {}
+  },
+  "options": {
+    "solc": {
+      "optimize": true,
+      "optimize-runs": 200
+    }
+  }
+}
