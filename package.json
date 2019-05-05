@@ -4,7 +4,6 @@
   "description": "",
   "scripts": {
     "web": "npx parcel app/index.html",
-    "run": "embark run",
     "test": "embark test"
   },
   "keywords": [],

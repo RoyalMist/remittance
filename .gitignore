@@ -8,3 +8,4 @@ embarkArtifacts
 node_modules
 .cache
 .idea
+build

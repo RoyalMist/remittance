@@ -3,41 +3,24 @@ module.exports = {
         deployment: {
             host: "localhost",
             port: 8546,
-            type: "ws",
-            accounts: [
-                {
-                    privateKey: "random",
-                    balance: "1000 ether"
-                },
-                {
-                    privateKey: "random",
-                    balance: "1000 ether"
-                },
-                {
-                    privateKey: "random",
-                    balance: "1000 ether"
-                },
-                {
-                    privateKey: "random",
-                    balance: "1000 ether"
-                },
-            ]
+            type: "ws"
         },
         dappConnection: [
             "$WEB3",
             "ws://localhost:8546",
             "http://localhost:8545"
         ],
-        gas: "auto",
-        contracts: {}
+        gas: "auto"
     },
 
     development: {
+        isDev: true,
         dappConnection: [
             "ws://localhost:8546",
             "http://localhost:8545",
             "$WEB3"
-        ]
+        ],
+        contracts: {}
     },
 
     privatenet: {},

@@ -2,10 +2,6 @@
   "contracts": [
     "contracts/**"
   ],
-  "app": {
-    "js/Remittance.js": "app/Remittance.js",
-    "Remittance.html": "app/Remittance.html"
-  },
   "buildDir": "build/",
   "config": {
     "contracts": "contracts.js",

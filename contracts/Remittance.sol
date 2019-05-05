@@ -2,10 +2,9 @@ pragma solidity 0.5.8;
 
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
+contract Remittance is Ownable {
 
-contract Remittance {
-
-    constructor() {
+    constructor() public {
 
     }
 }
