@@ -20,7 +20,11 @@ module.exports = {
             "http://localhost:8545",
             "$WEB3"
         ],
-        contracts: {}
+        contracts: {
+            Remittance: {
+                args: ['$accounts[0]', 1234, 4567]
+            }
+        }
     },
 
     privatenet: {},
