@@ -7,12 +7,12 @@ contract Remittance is Ownable {
     using SafeMath for uint;
 
     address public exchange;
-    string private exchange_otp;
-    string private debtor_otp;
+    bytes32 public exchange_otp;
+    bytes32 public debtor_otp;
 
-    constructor(address _exchange, uint _exchange_otp, uint _debtor_otp) public {
+    constructor(address _exchange, string memory _exchange_otp, string memory _debtor_otp) public {
         exchange = _exchange;
-        exchange_otp = "Hash"; //_exchange_otp;
-        debtor_otp = "Hash"; //_debtor_otp;
+        exchange_otp = keccak256(abi.encodePacked(address(this), exchange, _exchange_otp));
+        debtor_otp = keccak256(abi.encodePacked(address(this), exchange, _debtor_otp));
     }
 }

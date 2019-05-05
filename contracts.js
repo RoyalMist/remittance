@@ -22,7 +22,7 @@ module.exports = {
         ],
         contracts: {
             Remittance: {
-                args: ['$accounts[0]', 1234, 4567]
+                args: ['$accounts[0]', "1234", "4567"]
             }
         }
     },
