@@ -3,36 +3,35 @@ pragma solidity 0.5.8;
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
 contract Remittance is Ownable {
-    address public exchange;
-    bytes32 public exchange_otp;
-    bytes32 public debtor_otp;
+    struct Transaction {
+        address exchange;
+        uint amount;
+    }
 
-    event LogDeposit(address indexed initiator, uint howMuch);
-    event LogSetOTPs(address indexed initiator);
+    // Permits any exchange to store their password.
+    mapping(address => bytes32) private exchangePasswords;
+
+    // Usage of the fiat user OTP as a key to retrieve the desired transaction.
+    mapping(byte32 => Transaction) private transactions;
+
+    event LogInitTransaction(address indexed initiator, address exchange, uint howMuch);
+    event LogSetExchangePassword(address indexed initiator);
     event LogWithdraw(address indexed initiator, uint howMuch);
 
-    constructor(address _exchange) public {
-        require(_exchange != address(0x0), "Please provide a valid address");
-        exchange = _exchange;
+    function initTransaction(address _exchange, bytes32 _fiatOTP) onlyOwner payable public {
+        require(_exchange != address(0x0) && msg.value > 0, "Please provide a valid exchange address and a deposit greater than 0");
+        require(transactions[_fiatOTP].exchange == address(0x0), "This password is already used");
+        emit LogInitTransaction(msg.sender, _exchange, msg.value);
+        transactions[_fiatOTP] = Transaction({exchange : _exchange, amount : msg.value});
     }
 
-    function setOTPs(string memory _exchange_otp, string memory _debtor_otp) onlyOwner public {
-        //TODO String inequality.
-        //require(_exchange_otp != "" && _debtor_otp != "", "Please provide non empty passwords");
-        exchange_otp = hash(_exchange_otp);
-        debtor_otp = hash(_debtor_otp);
-        emit LogSetOTPs(msg.sender);
-    }
-
-    function deposit() onlyOwner payable public {
-        emit LogDeposit(msg.sender, msg.value);
+    function setExchangePassword(bytes32 _exchangePassword) public {
+        emit LogSetExchangePassword(msg.sender);
+        exchangePasswords[msg.sender] = _exchangePassword;
     }
 
     function withdraw(string memory _exchange_otp, string memory _debtor_otp) public {
-        require(msg.sender == exchange && address(this).balance > 0);
-        require(hash(_exchange_otp) == exchange_otp && hash(_debtor_otp) == debtor_otp, "One or more password is wrong");
-        emit LogWithdraw(msg.sender, address(this).balance);
-        address(msg.sender).transfer(address(this).balance);
+        //TODO
     }
 
     function hash(string memory _password) view private returns (bytes32 hash) {

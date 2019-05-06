@@ -21,9 +21,7 @@ module.exports = {
             "$WEB3"
         ],
         contracts: {
-            Remittance: {
-                args: ['$accounts[0]']
-            }
+            Remittance: {}
         }
     }
 };
