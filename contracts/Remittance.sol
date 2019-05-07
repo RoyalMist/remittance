@@ -45,7 +45,7 @@ contract Remittance is Ownable {
     }
 
     // Use contract address as a salt. May be not sufficient to protect from rainbow tables as Slat is known :(
-    function hash(bytes32 _password) view public returns (bytes32 hash) {
+    function hash(bytes32 _password) view private returns (bytes32 hash) {
         hash = keccak256(abi.encodePacked(address(this), _password));
     }
 }
