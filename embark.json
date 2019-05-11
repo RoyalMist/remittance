@@ -11,7 +11,7 @@
     "webserver": false
   },
   "versions": {
-    "solc": "0.5.8"
+    "solc": "0.5.2"
   },
   "plugins": {
     "embarkjs-connector-web3": {}

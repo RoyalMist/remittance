@@ -19,9 +19,6 @@ module.exports = {
             "ws://localhost:8546",
             "http://localhost:8545",
             "$WEB3"
-        ],
-        contracts: {
-            Remittance: {}
-        }
+        ]
     }
 };

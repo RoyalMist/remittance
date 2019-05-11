@@ -1,4 +1,4 @@
-pragma solidity 0.5.8;
+pragma solidity ^0.5.2;
 
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
@@ -19,11 +19,11 @@ contract Remittance is Ownable {
     event LogWithdraw(address indexed initiator, uint howMuch);
 
     // Instead of instantiating a contract per transaction, permits the creation of a infinite number of transactions.
-    function initTransaction(address _exchange, bytes32 _fiatOTP) onlyOwner payable public {
+    function initTransaction(address _exchange, bytes32 _fiat_hashed_otp) onlyOwner payable public {
         require(_exchange != address(0x0) && msg.value > 0, "Please provide a valid exchange address and a deposit greater than 0");
-        require(transactions[_fiatOTP].exchange != address(0x0), "This password is already used");
+        require(transactions[_fiat_hashed_otp].exchange == address(0x0), "This password is already used");
         emit LogInitTransaction(msg.sender, _exchange, msg.value);
-        transactions[_fiatOTP] = Transaction({exchange : _exchange, amount : msg.value});
+        transactions[_fiat_hashed_otp] = Transaction({exchange : _exchange, amount : msg.value});
     }
 
     // Exchanges can change their password at anytime.
@@ -32,7 +32,7 @@ contract Remittance is Ownable {
         exchangePasswords[msg.sender] = _exchangePassword;
     }
 
-    // Use the fiat user otp to retriev transaction and check against exchange otp.
+    // Use the fiat user otp to retrieve transaction and check against exchange otp.
     function withdraw(bytes32 _exchange_otp, bytes32 _debtor_otp) public {
         require(hash(_debtor_otp) == exchangePasswords[msg.sender], "Wrong exchange password");
         bytes32 hashed = hash(_exchange_otp);
@@ -45,7 +45,7 @@ contract Remittance is Ownable {
     }
 
     // Use contract address as a salt. May be not sufficient to protect from rainbow tables as Slat is known :(
-    function hash(bytes32 _password) view private returns (bytes32 hashed) {
+    function hash(bytes32 _password) view public returns (bytes32 hashed) {
         hashed = keccak256(abi.encodePacked(address(this), _password));
     }
 }

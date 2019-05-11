@@ -25,7 +25,8 @@ contract("Remittance", function () {
     this.timeout(0);
 
     it("should be ok", async function () {
-        console.log(accounts);
+        let hash = await Remittance.methods.hash(web3.utils.utf8ToHex("Hello")).call();
+        console.log(hash);
         //let result = await SimpleStorage.methods.storedData().call();
         //assert.strictEqual(parseInt(result, 10), 100);
     });
