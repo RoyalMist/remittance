@@ -27,20 +27,20 @@ contract Remittance is Ownable {
     }
 
     // Exchanges can change their password at anytime.
-    function setExchangePassword(bytes32 _exchangePassword) public {
+    function setExchangePassword(bytes32 _hashedExchangePassword) public {
         emit LogSetExchangePassword(msg.sender);
-        exchangePasswords[msg.sender] = _exchangePassword;
+        exchangePasswords[msg.sender] = _hashedExchangePassword;
     }
 
     // Use the fiat user otp to retrieve transaction and check against exchange otp.
-    function withdraw(bytes32 _exchange_otp, bytes32 _debtor_otp) public {
-        require(hash(_debtor_otp) == exchangePasswords[msg.sender], "Wrong exchange password");
-        bytes32 hashed = hash(_exchange_otp);
-        Transaction memory t = transactions[hashed];
+    function withdraw(bytes32 _exchange_otp, bytes32 _fiat_otp) public {
+        require(hash(_exchange_otp) == exchangePasswords[msg.sender], "Wrong exchange password");
+        bytes32 fiat_hashed_otp = hash(_fiat_otp);
+        Transaction memory t = transactions[fiat_hashed_otp];
         require(t.exchange != address(0x0), "Wrong fiat user password");
-        require(t.exchange == msg.sender, "You are not the exchange selected for this operation.");
+        require(t.exchange == msg.sender, "You are not the exchange selected for this operation");
         emit LogWithdraw(msg.sender, t.amount);
-        delete (transactions[hashed]);
+        delete (transactions[fiat_hashed_otp]);
         address(msg.sender).transfer(t.amount);
     }
 

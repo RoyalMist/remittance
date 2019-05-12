@@ -43,8 +43,9 @@ contract("Remittance", function () {
 
     it("should fail to init transaction without being the owner of the contract", async function () {
         let message = "";
+        const hash = await Remittance.methods.hash(web3.utils.utf8ToHex("Password")).call();
         try {
-            await Remittance.methods.initTransaction(accounts[1], web3.utils.utf8ToHex("Password")).send({
+            await Remittance.methods.initTransaction(accounts[1], hash).send({
                 from: accounts[1],
                 value: 100
             });
@@ -57,8 +58,9 @@ contract("Remittance", function () {
 
     it("should fail to init transaction with no amount", async function () {
         let message = "";
+        const hash = await Remittance.methods.hash(web3.utils.utf8ToHex("Password")).call();
         try {
-            await Remittance.methods.initTransaction(accounts[1], web3.utils.utf8ToHex("Password")).send({
+            await Remittance.methods.initTransaction(accounts[1], hash).send({
                 from: accounts[0],
                 value: 0
             });
@@ -71,9 +73,10 @@ contract("Remittance", function () {
 
     it("should fail to init transaction with an incorrect address", async function () {
         const zeroAddress = "0x0000000000000000000000000000000000000000";
+        const hash = await Remittance.methods.hash(web3.utils.utf8ToHex("Password")).call();
         let message = "";
         try {
-            await Remittance.methods.initTransaction(zeroAddress, web3.utils.utf8ToHex("Password")).send({
+            await Remittance.methods.initTransaction(zeroAddress, hash).send({
                 from: accounts[0],
                 value: 10
             });
@@ -86,12 +89,13 @@ contract("Remittance", function () {
 
     it("should fail to init transaction with an already set password", async function () {
         let message = "";
-        await Remittance.methods.initTransaction(accounts[1], web3.utils.utf8ToHex("1234")).send({
+        const hash = await Remittance.methods.hash(web3.utils.utf8ToHex("1234")).call();
+        await Remittance.methods.initTransaction(accounts[1], hash).send({
             from: accounts[0],
             value: 10
         });
         try {
-            await Remittance.methods.initTransaction(accounts[1], web3.utils.utf8ToHex("1234")).send({
+            await Remittance.methods.initTransaction(accounts[1], hash).send({
                 from: accounts[0],
                 value: 10
             });
@@ -104,7 +108,8 @@ contract("Remittance", function () {
 
     it("should emit an event and store the right information in storage", async function () {
         const currentBalance = new BN(await web3.eth.getBalance(Remittance.address));
-        let tx = await Remittance.methods.initTransaction(accounts[1], web3.utils.utf8ToHex("p@ssw0rd")).send({
+        const hash = await Remittance.methods.hash(web3.utils.utf8ToHex("Password")).call();
+        let tx = await Remittance.methods.initTransaction(accounts[1], hash).send({
             from: accounts[0],
             value: 10000
         });
@@ -117,5 +122,40 @@ contract("Remittance", function () {
         assert.equal(event.returnValues.initiator, accounts[0], "Initiator should be the first account");
         assert.equal(event.returnValues.exchange, accounts[1], "Exchange should the second account");
         assert.equal(event.returnValues.howMuch, 10000, "How much should represents the value we put");
+    });
+
+    /************************************************************************************************************
+     * Exchange password
+     ***********************************************************************************************************/
+
+    it("should emit an event and store the hash of the password", async function () {
+        const hash = await Remittance.methods.hash(web3.utils.utf8ToHex("p@sSw0rd")).call();
+        let tx = await Remittance.methods.setExchangePassword(hash).send({
+            from: accounts[1]
+        });
+
+        assert.strictEqual(Object.keys(tx.events).length, 1, "1 event should be emitted");
+        const event = tx.events.LogSetExchangePassword;
+        assert.equal(event.returnValues.initiator, accounts[1], "Initiator should be the second account");
+    });
+
+    /************************************************************************************************************
+     * Withdraw
+     ***********************************************************************************************************/
+
+    it("should revert on wrong exchange password", async function () {
+        let message = "";
+        const hash = await Remittance.methods.hash(web3.utils.utf8ToHex("Youpy74")).call();
+        await Remittance.methods.setExchangePassword(hash).send({
+            from: accounts[1]
+        });
+
+        try {
+            await Remittance.methods.withdraw(web3.utils.utf8ToHex("F@lsy"), web3.utils.utf8ToHex("*")).send({from: accounts[1]});
+        } catch (e) {
+            message = e.message;
+        }
+
+        assert.ok(message.includes("Wrong exchange password"));
     });
 });
