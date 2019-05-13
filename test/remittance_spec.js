@@ -12,6 +12,10 @@ config({
             {
                 privateKey: 'random',
                 balance: '100 ether'
+            },
+            {
+                privateKey: 'random',
+                balance: '100 ether'
             }
         ]
     },
@@ -157,5 +161,90 @@ contract("Remittance", function () {
         }
 
         assert.ok(message.includes("Wrong exchange password"));
+    });
+
+    it("should revert on wrong fiat user password", async function () {
+        const fiatPassword = await Remittance.methods.hash(web3.utils.utf8ToHex("MyFi@tPwd")).call();
+        await Remittance.methods.initTransaction(accounts[1], fiatPassword).send({
+            from: accounts[0],
+            value: 10000
+        });
+
+        const exchangePassword = await Remittance.methods.hash(web3.utils.utf8ToHex("MyExch@ngePwd")).call();
+        await Remittance.methods.setExchangePassword(exchangePassword).send({
+            from: accounts[1]
+        });
+
+        let message = "";
+        try {
+            await Remittance.methods.withdraw(web3.utils.utf8ToHex("MyExch@ngePwd"), web3.utils.utf8ToHex("F@lsy")).send({from: accounts[1]});
+        } catch (e) {
+            message = e.message;
+        }
+
+        assert.ok(message.includes("Wrong fiat user password"));
+    });
+
+    it("should revert on a rogue exchange trying to withdraw", async function () {
+        const fiatPassword = await Remittance.methods.hash(web3.utils.utf8ToHex("MyStolenFi@tPwd")).call();
+        await Remittance.methods.initTransaction(accounts[1], fiatPassword).send({
+            from: accounts[0],
+            value: 10000
+        });
+
+        const exchangePassword = await Remittance.methods.hash(web3.utils.utf8ToHex("MyRogueExch@ngePwd")).call();
+        await Remittance.methods.setExchangePassword(exchangePassword).send({
+            from: accounts[2]
+        });
+
+        let message = "";
+        try {
+            await Remittance.methods.withdraw(web3.utils.utf8ToHex("MyRogueExch@ngePwd"), web3.utils.utf8ToHex("MyStolenFi@tPwd")).send({from: accounts[2]});
+        } catch (e) {
+            message = e.message;
+        }
+
+        assert.ok(message.includes("You are not the exchange selected for this operation"));
+    });
+
+    it("should permit to withdraw only once by the rightful people", async function () {
+        const fiatPassword = await Remittance.methods.hash(web3.utils.utf8ToHex("Fi@tPwd")).call();
+        let theoreticalExchangeBalance = new BN(await web3.eth.getBalance(accounts[1]));
+        const gasPrice = 50;
+
+        await Remittance.methods.initTransaction(accounts[1], fiatPassword).send({
+            from: accounts[0],
+            value: 10000
+        });
+
+        const exchangePassword = await Remittance.methods.hash(web3.utils.utf8ToHex("Exch@ngePwd")).call();
+        let upgradePasswordTx = await Remittance.methods.setExchangePassword(exchangePassword).send({
+            from: accounts[1],
+            gasprice: gasPrice
+        });
+
+        theoreticalExchangeBalance = theoreticalExchangeBalance.minus(upgradePasswordTx.gasUsed * gasPrice);
+        let withdrawalTx = await Remittance.methods.withdraw(web3.utils.utf8ToHex("Exch@ngePwd"), web3.utils.utf8ToHex("Fi@tPwd")).send({
+            from: accounts[1],
+            gasprice: gasPrice
+        });
+
+        theoreticalExchangeBalance = theoreticalExchangeBalance.minus(withdrawalTx.gasUsed * gasPrice);
+        theoreticalExchangeBalance = theoreticalExchangeBalance.add(1000);
+        assert.equal(await web3.eth.getBalance(accounts[1]), theoreticalExchangeBalance.toString(), "The amount of the exchange account should have been upgraded");
+
+        assert.strictEqual(Object.keys(withdrawalTx.events).length, 1, "1 event should be emitted");
+        const event = withdrawalTx.events.LogWithdraw;
+        assert.equal(event.returnValues.initiator, accounts[1], "Initiator should be the exchange");
+        assert.equal(event.returnValues.howMuch, 10000, "How much should represents the value we put in init transaction");
+
+        let message = "";
+        try {
+            await Remittance.methods.withdraw(web3.utils.utf8ToHex("Exch@ngePwd"), web3.utils.utf8ToHex("Fi@tPwd")).send({from: accounts[1]});
+        } catch (e) {
+            message = e.message;
+        }
+
+        assert.ok(message.includes("Wrong fiat user password"));
     });
 });
