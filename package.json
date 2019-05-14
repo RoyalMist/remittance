@@ -14,6 +14,7 @@
     "parcel-bundler": "^1.12.3"
   },
   "dependencies": {
+    "big-number": "^2.0.0",
     "milligram": "^1.3.0",
     "openzeppelin-solidity": "^2.2.0",
     "vue": "^2.6.10"

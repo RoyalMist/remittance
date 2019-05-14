@@ -1,5 +1,5 @@
 const Remittance = require('Embark/contracts/Remittance');
-const BN = web3.utils.BN;
+const BN = require('big-number');
 
 let accounts;
 config({
@@ -111,6 +111,21 @@ contract("Remittance", function () {
         assert.ok(message.includes("This password is already used"));
     });
 
+    it("should deplete the sent amount to the owner", async function () {
+        let theoreticalBalance = new BN(await web3.eth.getBalance(accounts[0]));
+        const gasPrice = 50;
+        const hash = await RemittanceInstance.methods.hash(web3.utils.utf8ToHex("Password")).call();
+        let tx = await RemittanceInstance.methods.initTransaction(accounts[1], hash).send({
+            from: accounts[0],
+            value: 10000,
+            gasPrice: gasPrice
+        });
+
+        theoreticalBalance = theoreticalBalance.minus(tx.gasUsed * gasPrice);
+        theoreticalBalance = theoreticalBalance.minus(10000);
+        assert.equal(await web3.eth.getBalance(accounts[0]), theoreticalBalance.toString(), "The contract should have sent 10000 wei and paid the transaction fees");
+    });
+
     it("should emit an event and store the right information in storage", async function () {
         const currentBalance = new BN(await web3.eth.getBalance(RemittanceInstance.options.address));
         const hash = await RemittanceInstance.methods.hash(web3.utils.utf8ToHex("Password")).call();
@@ -210,7 +225,6 @@ contract("Remittance", function () {
 
     it("should permit to withdraw only once by the rightful people", async function () {
         const fiatPassword = await RemittanceInstance.methods.hash(web3.utils.utf8ToHex("MyFi@tPwd")).call();
-        let theoreticalExchangeBalance = new BN(await web3.eth.getBalance(accounts[1]));
         const gasPrice = 50;
 
         await RemittanceInstance.methods.initTransaction(accounts[1], fiatPassword).send({
@@ -219,23 +233,22 @@ contract("Remittance", function () {
         });
 
         const exchangePassword = await RemittanceInstance.methods.hash(web3.utils.utf8ToHex("MyExch@ngePwd")).call();
-        let upgradePasswordTx = await RemittanceInstance.methods.setExchangePassword(exchangePassword).send({
+        await RemittanceInstance.methods.setExchangePassword(exchangePassword).send({
             from: accounts[1],
-            gasprice: gasPrice
         });
 
-        theoreticalExchangeBalance = theoreticalExchangeBalance.minus(upgradePasswordTx.gasUsed * gasPrice);
-        let withdrawalTx = await RemittanceInstance.methods.withdraw(web3.utils.utf8ToHex("MyExch@ngePwd"), web3.utils.utf8ToHex("MyFi@tPwd")).send({
+        let theoreticalExchangeBalance = new BN(await web3.eth.getBalance(accounts[1]));
+        let tx = await RemittanceInstance.methods.withdraw(web3.utils.utf8ToHex("MyExch@ngePwd"), web3.utils.utf8ToHex("MyFi@tPwd")).send({
             from: accounts[1],
-            gasprice: gasPrice
+            gasPrice: gasPrice
         });
 
-        theoreticalExchangeBalance = theoreticalExchangeBalance.minus(withdrawalTx.gasUsed * gasPrice);
-        theoreticalExchangeBalance = theoreticalExchangeBalance.add(1000);
+        theoreticalExchangeBalance = theoreticalExchangeBalance.minus(tx.gasUsed * gasPrice);
+        theoreticalExchangeBalance = theoreticalExchangeBalance.add(10000);
         assert.equal(await web3.eth.getBalance(accounts[1]), theoreticalExchangeBalance.toString(), "The amount of the exchange account should have been upgraded");
 
-        assert.strictEqual(Object.keys(withdrawalTx.events).length, 1, "1 event should be emitted");
-        const event = withdrawalTx.events.LogWithdraw;
+        assert.strictEqual(Object.keys(tx.events).length, 1, "1 event should be emitted");
+        const event = tx.events.LogWithdraw;
         assert.equal(event.returnValues.initiator, accounts[1], "Initiator should be the exchange");
         assert.equal(event.returnValues.howMuch, 10000, "How much should represents the value we put in init transaction");
 
