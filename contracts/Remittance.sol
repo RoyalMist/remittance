@@ -33,8 +33,8 @@ contract Remittance is Ownable, Pausable {
     function cancelTransaction(address exchange, bytes32 otp) whenNotPaused public {
         bytes32 hashed_otp = hash(exchange, otp);
         Transaction memory t = _transactions[hashed_otp];
+        require(t.amount > 0, "Wrong password or not existing transaction");
         require(t.initiator == msg.sender, "You are not the initiator of this transaction");
-        require(t.amount > 0, "Wrong password");
         emit LogCancelTransaction(msg.sender, exchange, t.amount);
         delete _transactions[hashed_otp];
         address(msg.sender).transfer(t.amount);
@@ -44,7 +44,7 @@ contract Remittance is Ownable, Pausable {
     function withdraw(bytes32 otp) whenNotPaused public {
         bytes32 hashed_otp = hash(msg.sender, otp);
         uint amount = _transactions[hashed_otp].amount;
-        require(amount > 0, "Wrong password");
+        require(amount > 0, "Wrong password or not existing transaction");
         emit LogWithdraw(msg.sender, amount);
         delete _transactions[hashed_otp];
         address(msg.sender).transfer(amount);
