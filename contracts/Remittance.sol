@@ -35,7 +35,7 @@ contract Remittance is Pausable {
         require(t.amount > 0, "Wrong password or not existing transaction");
         require(t.initiator == msg.sender, "You are not the initiator of this transaction");
         emit LogCancelTransaction(msg.sender, exchange, t.amount);
-        delete _transactions[hashed_otp];
+        _transactions[hashed_otp].amount = 0;
         address(msg.sender).transfer(t.amount);
     }
 
@@ -45,7 +45,7 @@ contract Remittance is Pausable {
         uint amount = _transactions[hashed_otp].amount;
         require(amount > 0, "Wrong password or not existing transaction");
         emit LogWithdraw(msg.sender, amount);
-        delete _transactions[hashed_otp];
+        _transactions[hashed_otp].amount = 0;
         address(msg.sender).transfer(amount);
     }
 }
