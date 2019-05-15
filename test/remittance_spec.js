@@ -1,5 +1,6 @@
 const Remittance = require('Embark/contracts/Remittance');
 const BN = require('big-number');
+const gasPrice = 50;
 
 let accounts;
 config({
@@ -116,7 +117,6 @@ contract("Remittance", function () {
 
     it("should deplete the sent amount to the owner", async function () {
         let theoreticalBalance = new BN(await web3.eth.getBalance(accounts[0]));
-        const gasPrice = 50;
         const hash = await RemittanceInstance.methods.hash(accounts[1], web3.utils.utf8ToHex("Password")).call();
         let rcpt = await RemittanceInstance.methods.initTransaction(accounts[1], hash).send({
             from: accounts[0],
@@ -199,8 +199,6 @@ contract("Remittance", function () {
 
     it("should permit to cancel only once by the rightful people", async function () {
         const hash = await RemittanceInstance.methods.hash(accounts[1], web3.utils.utf8ToHex("MyFi@tPwd")).call();
-        const gasPrice = 50;
-
         await RemittanceInstance.methods.initTransaction(accounts[1], hash).send({
             from: accounts[0],
             value: 10000
@@ -284,8 +282,6 @@ contract("Remittance", function () {
 
     it("should permit to withdraw only once by the rightful people", async function () {
         const hash = await RemittanceInstance.methods.hash(accounts[1], web3.utils.utf8ToHex("MyFi@tPwd")).call();
-        const gasPrice = 50;
-
         await RemittanceInstance.methods.initTransaction(accounts[1], hash).send({
             from: accounts[0],
             value: 10000
