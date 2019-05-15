@@ -17,7 +17,7 @@ contract Remittance is Pausable {
 
     // Use exchange address as a salt.
     function hash(address exchange, bytes32 password) whenNotPaused view public returns (bytes32 hashed) {
-        hashed = keccak256(abi.encodePacked(exchange, password));
+        hashed = keccak256(abi.encodePacked(address(this), exchange, password));
     }
 
     // Instead of instantiating a contract per transaction, permits the creation of a infinite number of transactions.
