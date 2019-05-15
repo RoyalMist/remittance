@@ -10,13 +10,17 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "@vue/component-compiler-utils": "^3.0.0",
     "embarkjs-connector-web3": "^4.0.0",
-    "parcel-bundler": "^1.12.3"
+    "parcel-bundler": "^1.12.3",
+    "vue-template-compiler": "^2.6.10"
   },
   "dependencies": {
     "big-number": "^2.0.0",
+    "embarkjs": "^4.0.2",
     "milligram": "^1.3.0",
     "openzeppelin-solidity": "^2.2.0",
-    "vue": "^2.6.10"
+    "vue": "^2.6.10",
+    "vue-hot-reload-api": "^2.3.3"
   }
 }
