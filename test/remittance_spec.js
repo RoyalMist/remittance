@@ -34,18 +34,6 @@ contract("Remittance", function () {
      * Hashing
      ***********************************************************************************************************/
 
-    it("should be impossible to hash when paused", async function () {
-        let message = "";
-        await RemittanceInstance.methods.pause().send({from: accounts[0]});
-        try {
-            await RemittanceInstance.methods.hash(accounts[1], web3.utils.utf8ToHex("Password")).call();
-        } catch (e) {
-            message = e.message;
-        }
-
-        assert.ok(message.includes("revert"));
-    });
-
     it("should hash the given input", async function () {
         let hash1 = await RemittanceInstance.methods.hash(accounts[1], web3.utils.utf8ToHex("Hello")).call();
         let hash2 = await RemittanceInstance.methods.hash(accounts[1], web3.utils.utf8ToHex("Helli")).call();
@@ -59,21 +47,6 @@ contract("Remittance", function () {
     /************************************************************************************************************
      * Init transaction
      ***********************************************************************************************************/
-
-    it("should fail to init transaction without being the owner of the contract", async function () {
-        let message = "";
-        const hash = await RemittanceInstance.methods.hash(accounts[1], web3.utils.utf8ToHex("Password")).call();
-        try {
-            await RemittanceInstance.methods.initTransaction(accounts[1], hash).send({
-                from: accounts[1],
-                value: 100
-            });
-        } catch (e) {
-            message = e.message;
-        }
-
-        assert.ok(message.includes("revert"));
-    });
 
     it("should fail to init transaction when paused", async function () {
         let message = "";
@@ -145,13 +118,13 @@ contract("Remittance", function () {
         let theoreticalBalance = new BN(await web3.eth.getBalance(accounts[0]));
         const gasPrice = 50;
         const hash = await RemittanceInstance.methods.hash(accounts[1], web3.utils.utf8ToHex("Password")).call();
-        let tx = await RemittanceInstance.methods.initTransaction(accounts[1], hash).send({
+        let rcpt = await RemittanceInstance.methods.initTransaction(accounts[1], hash).send({
             from: accounts[0],
             value: 10000,
             gasPrice: gasPrice
         });
 
-        theoreticalBalance = theoreticalBalance.minus(tx.gasUsed * gasPrice);
+        theoreticalBalance = theoreticalBalance.minus(rcpt.gasUsed * gasPrice);
         theoreticalBalance = theoreticalBalance.minus(10000);
         assert.equal(await web3.eth.getBalance(accounts[0]), theoreticalBalance.toString(), "The contract should have sent 10000 wei and paid the transaction fees");
     });
@@ -159,7 +132,7 @@ contract("Remittance", function () {
     it("should emit an event and store the right information in storage", async function () {
         const currentBalance = new BN(await web3.eth.getBalance(RemittanceInstance.options.address));
         const hash = await RemittanceInstance.methods.hash(accounts[1], web3.utils.utf8ToHex("Password")).call();
-        let tx = await RemittanceInstance.methods.initTransaction(accounts[1], hash).send({
+        let rcpt = await RemittanceInstance.methods.initTransaction(accounts[1], hash).send({
             from: accounts[0],
             value: 10000
         });
@@ -167,8 +140,8 @@ contract("Remittance", function () {
         const theoreticalBalance = currentBalance.add(new BN(10000));
         assert.equal(await web3.eth.getBalance(RemittanceInstance.options.address), theoreticalBalance.toString(), "The contract should have been granted 10000 wei");
 
-        assert.strictEqual(Object.keys(tx.events).length, 1, "1 event should be emitted");
-        const event = tx.events.LogInitTransaction;
+        assert.strictEqual(Object.keys(rcpt.events).length, 1, "1 event should be emitted");
+        const event = rcpt.events.LogInitTransaction;
         assert.equal(event.returnValues.initiator, accounts[0], "Initiator should be the first account");
         assert.equal(event.returnValues.exchange, accounts[1], "Exchange should the second account");
         assert.equal(event.returnValues.howMuch, 10000, "How much should represents the value we put");
@@ -234,17 +207,17 @@ contract("Remittance", function () {
         });
 
         let theoreticalInitiatorBalance = new BN(await web3.eth.getBalance(accounts[0]));
-        let tx = await RemittanceInstance.methods.cancelTransaction(accounts[1], web3.utils.utf8ToHex("MyFi@tPwd")).send({
+        let rcpt = await RemittanceInstance.methods.cancelTransaction(accounts[1], web3.utils.utf8ToHex("MyFi@tPwd")).send({
             from: accounts[0],
             gasPrice: gasPrice
         });
 
-        theoreticalInitiatorBalance = theoreticalInitiatorBalance.minus(tx.gasUsed * gasPrice);
+        theoreticalInitiatorBalance = theoreticalInitiatorBalance.minus(rcpt.gasUsed * gasPrice);
         theoreticalInitiatorBalance = theoreticalInitiatorBalance.add(10000);
         assert.equal(await web3.eth.getBalance(accounts[0]), theoreticalInitiatorBalance.toString(), "The amount of the exchange account should have been upgraded");
 
-        assert.strictEqual(Object.keys(tx.events).length, 1, "1 event should be emitted");
-        const event = tx.events.LogCancelTransaction;
+        assert.strictEqual(Object.keys(rcpt.events).length, 1, "1 event should be emitted");
+        const event = rcpt.events.LogCancelTransaction;
         assert.equal(event.returnValues.initiator, accounts[0], "Initiator should be the initiator of the transaction");
         assert.equal(event.returnValues.exchange, accounts[1], "Exchange should be the second account");
         assert.equal(event.returnValues.howMuch, 10000, "How much should represents the value we put in init transaction");
@@ -319,17 +292,17 @@ contract("Remittance", function () {
         });
 
         let theoreticalExchangeBalance = new BN(await web3.eth.getBalance(accounts[1]));
-        let tx = await RemittanceInstance.methods.withdraw(web3.utils.utf8ToHex("MyFi@tPwd")).send({
+        let rcpt = await RemittanceInstance.methods.withdraw(web3.utils.utf8ToHex("MyFi@tPwd")).send({
             from: accounts[1],
             gasPrice: gasPrice
         });
 
-        theoreticalExchangeBalance = theoreticalExchangeBalance.minus(tx.gasUsed * gasPrice);
+        theoreticalExchangeBalance = theoreticalExchangeBalance.minus(rcpt.gasUsed * gasPrice);
         theoreticalExchangeBalance = theoreticalExchangeBalance.add(10000);
         assert.equal(await web3.eth.getBalance(accounts[1]), theoreticalExchangeBalance.toString(), "The amount of the exchange account should have been upgraded");
 
-        assert.strictEqual(Object.keys(tx.events).length, 1, "1 event should be emitted");
-        const event = tx.events.LogWithdraw;
+        assert.strictEqual(Object.keys(rcpt.events).length, 1, "1 event should be emitted");
+        const event = rcpt.events.LogWithdraw;
         assert.equal(event.returnValues.initiator, accounts[1], "Initiator should be the exchange");
         assert.equal(event.returnValues.howMuch, 10000, "How much should represents the value we put in init transaction");
 

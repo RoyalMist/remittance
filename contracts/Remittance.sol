@@ -1,9 +1,8 @@
 pragma solidity ^0.5.2;
 
-import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "openzeppelin-solidity/contracts/lifecycle/Pausable.sol";
 
-contract Remittance is Ownable, Pausable {
+contract Remittance is Pausable {
     struct Transaction {
         address initiator;
         uint amount;
@@ -22,7 +21,7 @@ contract Remittance is Ownable, Pausable {
     }
 
     // Instead of instantiating a contract per transaction, permits the creation of a infinite number of transactions.
-    function initTransaction(address exchange, bytes32 hashed_otp) onlyOwner whenNotPaused payable public {
+    function initTransaction(address exchange, bytes32 hashed_otp) whenNotPaused payable public {
         require(exchange != address(0x0) && msg.value > 0, "Please provide a valid exchange address and a deposit greater than 0");
         require(_transactions[hashed_otp].initiator == address(0x0), "This password is already used");
         emit LogInitTransaction(msg.sender, exchange, msg.value);
