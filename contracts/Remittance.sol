@@ -8,12 +8,12 @@ contract Remittance is Ownable, Pausable {
     using SafeMath for uint;
 
     // Delay to wait for being able to cancel a transaction.
-    uint public constant cancellationDelay = 7 days;
+    uint public constant CANCELLATION_DELAY = 7 days;
 
-    // Let's put 150 wei as a fee if the user is not the owner.
-    uint public constant usageFees = 150;
+    // Let's put 1500 wei as a fee if the user is not the owner.
+    uint public constant USAGE_FEES = 1500;
 
-    uint private fees;
+    uint private _fees;
 
     struct Transaction {
         uint time;
@@ -41,12 +41,12 @@ contract Remittance is Ownable, Pausable {
         require(_transactions[hashed_otp].initiator == address(0x0), "This password is already used");
         uint amount = msg.value;
         if (!isOwner()) {
-            fees.add(usageFees);
-            amount = amount.sub(usageFees);
-            emit LogTakeFees(msg.sender, usageFees);
+            _fees = _fees.add(USAGE_FEES);
+            amount = amount.sub(USAGE_FEES);
+            emit LogTakeFees(msg.sender, USAGE_FEES);
         }
 
-        emit LogInitTransaction(msg.sender, exchange, msg.value);
+        emit LogInitTransaction(msg.sender, exchange, amount);
         _transactions[hashed_otp] = Transaction({time : now, initiator : msg.sender, amount : amount});
     }
 
@@ -56,7 +56,7 @@ contract Remittance is Ownable, Pausable {
         Transaction memory t = _transactions[hashed_otp];
         require(t.amount > 0, "Wrong password or not existing transaction");
         require(t.initiator == msg.sender, "You are not the initiator of this transaction");
-        require(now >= t.time + cancellationDelay, "Please wait for 7 days before canceling");
+        require(now >= t.time + CANCELLATION_DELAY, "Please wait for 7 days before canceling");
         emit LogCancelTransaction(msg.sender, exchange, t.amount);
         _transactions[hashed_otp].amount = 0;
         address(msg.sender).transfer(t.amount);
@@ -73,9 +73,9 @@ contract Remittance is Ownable, Pausable {
     }
 
     function withdrawFees() onlyOwner public {
-        require(fees > 0, "Nothing to withdraw");
-        uint amount = fees;
-        fees = 0;
+        require(_fees > 0, "Nothing to withdraw");
+        uint amount = _fees;
+        _fees = 0;
         emit LogWithdrawFees(msg.sender, amount);
         address(msg.sender).transfer(amount);
     }

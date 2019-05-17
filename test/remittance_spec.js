@@ -356,4 +356,108 @@ contract("Remittance", function () {
 
         assert.ok(message.includes("Wrong password or not existing transaction"));
     });
+
+    /************************************************************************************************************
+     * Fees
+     ***********************************************************************************************************/
+
+    it("should be impossible to withdraw fees and not being the owner", async function () {
+        let message = "";
+        try {
+            await RemittanceInstance.methods.withdrawFees().send({from: accounts[1]});
+        } catch (e) {
+            message = e.message;
+        }
+
+        assert.ok(message.includes("revert"));
+    });
+
+    it("should be impossible to withdraw fees if no fees are present while being the owner", async function () {
+        let message = "";
+        try {
+            await RemittanceInstance.methods.withdrawFees().send({from: accounts[0]});
+        } catch (e) {
+            message = e.message;
+        }
+
+        assert.ok(message.includes("Nothing to withdraw"));
+    });
+
+    it("should be possible to withdraw fees while being the owner", async function () {
+        const hash_1 = await RemittanceInstance.methods.hash(accounts[2], web3.utils.utf8ToHex("MyFi@tPwd")).call();
+        const hash_2 = await RemittanceInstance.methods.hash(accounts[1], web3.utils.utf8ToHex("P@tPwd")).call();
+        let rcpt1 = await RemittanceInstance.methods.initTransaction(accounts[2], hash_1).send({
+            from: accounts[1],
+            value: 10000000
+        });
+
+        assert.strictEqual(Object.keys(rcpt1.events).length, 2, "2 events should be emitted");
+        const logTakeFees = rcpt1.events.LogTakeFees;
+        assert.equal(logTakeFees.returnValues.initiator, accounts[1], "Initiator should be the account 1");
+        assert.equal(logTakeFees.returnValues.howMuch, 1500, "How much should represents the fees taken");
+        const logInitTransaction = rcpt1.events.LogInitTransaction;
+        assert.equal(logInitTransaction.returnValues.initiator, accounts[1], "Initiator should be the account 1");
+        assert.equal(logInitTransaction.returnValues.exchange, accounts[2], "Exchange should be the account 2");
+        assert.equal(logInitTransaction.returnValues.howMuch, 10000000 - 1500, "How much should represents the value we put in init transaction minus the fees");
+
+        let rcpt2 = await RemittanceInstance.methods.initTransaction(accounts[1], hash_2).send({
+            from: accounts[0],
+            value: 40000000
+        });
+        assert.strictEqual(Object.keys(rcpt2.events).length, 1, "1 event should be emitted");
+        const event = rcpt2.events.LogInitTransaction;
+        assert.equal(event.returnValues.initiator, accounts[0], "Initiator should be the account 0");
+        assert.equal(event.returnValues.exchange, accounts[1], "Exchange should be the account 1");
+        assert.equal(event.returnValues.howMuch, 40000000, "How much should represents the value we put in init transaction");
+
+        let theoreticalOwnerBalance = new BN(await web3.eth.getBalance(accounts[0]));
+        let rcpt = await RemittanceInstance.methods.withdrawFees().send({
+            from: accounts[0],
+            gasPrice: gasPrice
+        });
+
+        theoreticalOwnerBalance = theoreticalOwnerBalance.minus(rcpt.gasUsed * gasPrice);
+        theoreticalOwnerBalance = theoreticalOwnerBalance.add(1500);
+        assert.equal(await web3.eth.getBalance(accounts[0]), theoreticalOwnerBalance.toString(), "The amount of the owner account should have been upgraded");
+    });
+
+    /************************************************************************************************************
+     * Self destruct
+     ***********************************************************************************************************/
+
+    it("should be impossible to kill the contract and not being the owner", async function () {
+        let message = "";
+        try {
+            await RemittanceInstance.methods.killMe().send({from: accounts[1]});
+        } catch (e) {
+            message = e.message;
+        }
+
+        assert.ok(message.includes("revert"));
+    });
+
+    it("should withdraw all the contract and steal other people money", async function () {
+        const hash_1 = await RemittanceInstance.methods.hash(accounts[1], web3.utils.utf8ToHex("MyFi@tPwd")).call();
+        const hash_2 = await RemittanceInstance.methods.hash(accounts[2], web3.utils.utf8ToHex("MyFi@tPwd")).call();
+        await RemittanceInstance.methods.initTransaction(accounts[2], hash_1).send({
+            from: accounts[1],
+            value: 10000000
+        });
+
+        await RemittanceInstance.methods.initTransaction(accounts[1], hash_2).send({
+            from: accounts[2],
+            value: 50000000
+        });
+
+        let theoreticalOwnerBalance = new BN(await web3.eth.getBalance(accounts[0]));
+        let rcpt = await RemittanceInstance.methods.killMe().send({
+            from: accounts[0],
+            gasPrice: gasPrice
+        });
+
+        theoreticalOwnerBalance = theoreticalOwnerBalance.minus(rcpt.gasUsed * gasPrice);
+        theoreticalOwnerBalance = theoreticalOwnerBalance.add(10000000);
+        theoreticalOwnerBalance = theoreticalOwnerBalance.add(50000000);
+        assert.equal(await web3.eth.getBalance(accounts[0]), theoreticalOwnerBalance.toString(), "The amount of the owner account should have been upgraded");
+    });
 });
