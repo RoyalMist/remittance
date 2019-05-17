@@ -248,9 +248,7 @@ contract("Remittance", function () {
             value: 10000
         });
 
-        let toto = await increaseTime(sevenDays);
-        console.log(toto);
-
+        await increaseTime(sevenDays);
         let theoreticalInitiatorBalance = new BN(await web3.eth.getBalance(accounts[0]));
         let rcpt = await RemittanceInstance.methods.cancelTransaction(accounts[1], web3.utils.utf8ToHex("MyFi@tPwd")).send({
             from: accounts[0],
