@@ -1,7 +1,33 @@
 const Remittance = require('Embark/contracts/Remittance');
 const BN = require('big-number');
-const {time} = require('openzeppelin-test-helpers');
 const gasPrice = 50;
+const sevenDays = 7 * 24 * 60 * 60;
+
+const evmMethod = (method, params = []) => {
+    return new Promise(function (resolve, reject) {
+        const sendMethod = (web3.currentProvider.sendAsync) ? web3.currentProvider.sendAsync.bind(web3.currentProvider) : web3.currentProvider.send.bind(web3.currentProvider);
+        sendMethod(
+            {
+                jsonrpc: '2.0',
+                method,
+                params,
+                id: new Date().getSeconds()
+            },
+            (error, res) => {
+                if (error) {
+                    return reject(error);
+                }
+
+                resolve(res.result);
+            }
+        );
+    });
+};
+
+const increaseTime = async (amount) => {
+    await evmMethod("evm_increaseTime", [Number(amount)]);
+    await evmMethod("evm_mine");
+};
 
 let accounts;
 config({
@@ -198,12 +224,32 @@ contract("Remittance", function () {
         assert.ok(message.includes("Wrong password or not existing transaction"));
     });
 
+    it("should be impossible to cancel a transaction before the deadline", async function () {
+        let message = "";
+        const hash = await RemittanceInstance.methods.hash(accounts[1], web3.utils.utf8ToHex("Password")).call();
+        await RemittanceInstance.methods.initTransaction(accounts[1], hash).send({
+            from: accounts[0],
+            value: 10000
+        });
+
+        try {
+            await RemittanceInstance.methods.cancelTransaction(accounts[1], web3.utils.utf8ToHex("Password")).send({from: accounts[0]});
+        } catch (e) {
+            message = e.message;
+        }
+
+        assert.ok(message.includes("Please wait for 7 days before canceling"));
+    });
+
     it("should permit to cancel only once by the rightful people", async function () {
         const hash = await RemittanceInstance.methods.hash(accounts[1], web3.utils.utf8ToHex("MyFi@tPwd")).call();
         await RemittanceInstance.methods.initTransaction(accounts[1], hash).send({
             from: accounts[0],
             value: 10000
         });
+
+        let toto = await increaseTime(sevenDays);
+        console.log(toto);
 
         let theoreticalInitiatorBalance = new BN(await web3.eth.getBalance(accounts[0]));
         let rcpt = await RemittanceInstance.methods.cancelTransaction(accounts[1], web3.utils.utf8ToHex("MyFi@tPwd")).send({
