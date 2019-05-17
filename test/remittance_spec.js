@@ -1,5 +1,6 @@
 const Remittance = require('Embark/contracts/Remittance');
 const BN = require('big-number');
+const {time} = require('openzeppelin-test-helpers');
 const gasPrice = 50;
 
 let accounts;

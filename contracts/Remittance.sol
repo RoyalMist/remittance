@@ -1,9 +1,13 @@
 pragma solidity ^0.5.2;
 
 import "openzeppelin-solidity/contracts/lifecycle/Pausable.sol";
+import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
-contract Remittance is Pausable {
+contract Remittance is Ownable, Pausable {
+    uint public constant cancellationDelay = 7 days;
+
     struct Transaction {
+        uint time;
         address initiator;
         uint amount;
     }
@@ -25,13 +29,14 @@ contract Remittance is Pausable {
         require(exchange != address(0x0) && msg.value > 0, "Please provide a valid exchange address and a deposit greater than 0");
         require(_transactions[hashed_otp].initiator == address(0x0), "This password is already used");
         emit LogInitTransaction(msg.sender, exchange, msg.value);
-        _transactions[hashed_otp] = Transaction({initiator : msg.sender, amount : msg.value});
+        _transactions[hashed_otp] = Transaction({time : now, initiator : msg.sender, amount : msg.value});
     }
 
     // Use to cancel a transaction and get back money to the initiator.
     function cancelTransaction(address exchange, bytes32 otp) whenNotPaused public {
         bytes32 hashed_otp = hash(exchange, otp);
         Transaction memory t = _transactions[hashed_otp];
+        require(now >= t.time * cancellationDelay, "Please wait for 7 days before canceling");
         require(t.amount > 0, "Wrong password or not existing transaction");
         require(t.initiator == msg.sender, "You are not the initiator of this transaction");
         emit LogCancelTransaction(msg.sender, exchange, t.amount);
@@ -47,5 +52,10 @@ contract Remittance is Pausable {
         emit LogWithdraw(msg.sender, amount);
         _transactions[hashed_otp].amount = 0;
         address(msg.sender).transfer(amount);
+    }
+
+    function killMe() onlyOwner public {
+        // Here is the security hole :). Owner can steal.
+        selfdestruct(msg.sender);
     }
 }
