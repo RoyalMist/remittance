@@ -56,7 +56,7 @@ contract Remittance is Ownable, Pausable {
         Transaction memory t = _transactions[hashed_otp];
         require(t.amount > 0, "Wrong password or not existing transaction");
         require(t.initiator == msg.sender, "You are not the initiator of this transaction");
-        require(now >= t.time + CANCELLATION_DELAY, "Please wait for 7 days before canceling");
+        require(now >= t.time.add(CANCELLATION_DELAY), "Please wait for 7 days before canceling");
         emit LogCancelTransaction(msg.sender, exchange, t.amount);
         _transactions[hashed_otp].amount = 0;
         address(msg.sender).transfer(t.amount);
