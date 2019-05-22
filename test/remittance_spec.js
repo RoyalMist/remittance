@@ -2,6 +2,7 @@ const Remittance = require('Embark/contracts/Remittance');
 const BN = require('big-number');
 const gasPrice = 50;
 const sevenDays = 7 * 24 * 60 * 60;
+const ninetyDays = 90 * 24 * 60 * 60;
 
 const evmMethod = (method, params = []) => {
     return new Promise(function (resolve, reject) {
@@ -425,7 +426,45 @@ contract("Remittance", function () {
         assert.ok(message.includes("revert"));
     });
 
-    it("should withdraw all the contract and steal other people money", async function () {
+    it("should be impossible to kill the contract and not being the owner", async function () {
+        let message = "";
+        try {
+            await RemittanceInstance.methods.killMe().send({from: accounts[1]});
+        } catch (e) {
+            message = e.message;
+        }
+
+        assert.ok(message.includes("revert"));
+    });
+
+    it("should be impossible to init a new transaction on pre kill state", async function () {
+        let message = "";
+        await RemittanceInstance.methods.killMe().send({from: accounts[0]});
+        try {
+            await RemittanceInstance.methods.initTransaction(accounts[1], web3.utils.utf8ToHex("*")).send({
+                from: accounts[2],
+                value: 50000000
+            });
+        } catch (e) {
+            message = e.message;
+        }
+
+        assert.ok(message.includes("The contract is in pre kill state"));
+    });
+
+    it("should be impossible to self destruct during the pre kill state", async function () {
+        let message = "";
+        await RemittanceInstance.methods.killMe().send({from: accounts[0]});
+        try {
+            await RemittanceInstance.methods.killMe().send({from: accounts[0]});
+        } catch (e) {
+            message = e.message;
+        }
+
+        assert.ok(message.includes("Cannot kill contract before the end of the pre kill state"));
+    });
+
+    it("should withdraw all the contract on kill", async function () {
         const hash_1 = await RemittanceInstance.methods.hash(accounts[1], web3.utils.utf8ToHex("MyFi@tPwd")).call();
         const hash_2 = await RemittanceInstance.methods.hash(accounts[2], web3.utils.utf8ToHex("MyFi@tPwd")).call();
         await RemittanceInstance.methods.initTransaction(accounts[2], hash_1).send({
@@ -437,6 +476,10 @@ contract("Remittance", function () {
             from: accounts[2],
             value: 50000000
         });
+
+
+        await RemittanceInstance.methods.killMe().send({from: accounts[0]});
+        await increaseTime(ninetyDays);
 
         let theoreticalOwnerBalance = new BN(await web3.eth.getBalance(accounts[0]));
         let rcpt = await RemittanceInstance.methods.killMe().send({
