@@ -372,18 +372,7 @@ contract("Remittance", function () {
         assert.ok(message.includes("revert"));
     });
 
-    it("should be impossible to withdraw fees if no fees are present while being the owner", async function () {
-        let message = "";
-        try {
-            await RemittanceInstance.methods.withdrawFees().send({from: accounts[0]});
-        } catch (e) {
-            message = e.message;
-        }
-
-        assert.ok(message.includes("Nothing to withdraw"));
-    });
-
-    it("should be possible to withdraw fees while being the owner", async function () {
+    it("should be possible to withdraw fees if some are presents", async function () {
         const hash_1 = await RemittanceInstance.methods.hash(accounts[2], web3.utils.utf8ToHex("MyFi@tPwd")).call();
         const hash_2 = await RemittanceInstance.methods.hash(accounts[1], web3.utils.utf8ToHex("P@tPwd")).call();
         let rcpt1 = await RemittanceInstance.methods.initTransaction(accounts[2], hash_1).send({

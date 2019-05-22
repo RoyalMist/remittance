@@ -13,7 +13,7 @@ contract Remittance is Ownable, Pausable {
     // Let's put 1500 wei as a fee if the user is not the owner.
     uint public constant USAGE_FEES = 1500;
 
-    uint private _fees;
+    mapping(address => uint) private _fees;
 
     struct Transaction {
         uint time;
@@ -41,7 +41,7 @@ contract Remittance is Ownable, Pausable {
         require(_transactions[hashed_otp].initiator == address(0x0), "This password is already used");
         uint amount = msg.value;
         if (!isOwner()) {
-            _fees = _fees.add(USAGE_FEES);
+            _fees[owner()] = _fees[owner()].add(USAGE_FEES);
             amount = amount.sub(USAGE_FEES);
             emit LogTakeFees(msg.sender, USAGE_FEES);
         }
@@ -74,10 +74,10 @@ contract Remittance is Ownable, Pausable {
         address(msg.sender).transfer(amount);
     }
 
-    function withdrawFees() onlyOwner public {
-        require(_fees > 0, "Nothing to withdraw");
-        uint amount = _fees;
-        _fees = 0;
+    function withdrawFees() public {
+        require(_fees[msg.sender] > 0, "Nothing to withdraw");
+        uint amount = _fees[msg.sender];
+        _fees[msg.sender] = 0;
         emit LogWithdrawFees(msg.sender, amount);
         address(msg.sender).transfer(amount);
     }
