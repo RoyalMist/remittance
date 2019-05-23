@@ -28,10 +28,10 @@ contract Remittance is PreKillable, Pausable {
     event LogTakeFees(address indexed initiator, uint howMuch);
     event LogCancelTransaction(address indexed initiator, address exchange, uint howMuch);
     event LogWithdraw(address indexed initiator, uint howMuch);
-    event LogWithdrawFees(address indexed initiator, uint howMuch);
 
     // Use exchange address as a salt.
     function hash(address exchange, bytes32 password) public view returns (bytes32 hashed) {
+        require(exchange != address(0x0) && password != 0, "Please provide valid inputs");
         hashed = keccak256(abi.encodePacked(address(this), exchange, password));
     }
 
@@ -78,7 +78,7 @@ contract Remittance is PreKillable, Pausable {
         require(_fees[msg.sender] > 0, "Nothing to withdraw");
         uint amount = _fees[msg.sender];
         _fees[msg.sender] = 0;
-        emit LogWithdrawFees(msg.sender, amount);
+        emit LogWithdraw(msg.sender, amount);
         address(msg.sender).transfer(amount);
     }
 

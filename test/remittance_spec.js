@@ -63,6 +63,27 @@ contract("Remittance", function () {
      * Hashing
      ***********************************************************************************************************/
 
+    it("should refuse bad arguments", async function () {
+        const zeroAddress = "0x0000000000000000000000000000000000000000";
+        let message = "";
+        try {
+            await RemittanceInstance.methods.hash(zeroAddress, web3.utils.utf8ToHex("Password")).call();
+        } catch (e) {
+            message = e.message;
+        }
+
+        assert.ok(message.includes("Please provide valid inputs"));
+
+        message = "";
+        try {
+            await RemittanceInstance.methods.hash(accounts[1], web3.utils.utf8ToHex("")).call();
+        } catch (e) {
+            message = e.message;
+        }
+
+        assert.ok(message.includes("Please provide valid inputs"));
+    });
+
     it("should hash the given input", async function () {
         let hash1 = await RemittanceInstance.methods.hash(accounts[1], web3.utils.utf8ToHex("Hello")).call();
         let hash2 = await RemittanceInstance.methods.hash(accounts[1], web3.utils.utf8ToHex("Helli")).call();
@@ -476,7 +497,6 @@ contract("Remittance", function () {
             from: accounts[2],
             value: 50000000
         });
-
 
         await RemittanceInstance.methods.killMe().send({from: accounts[0]});
         await increaseTime(ninetyDays);
